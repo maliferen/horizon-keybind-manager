@@ -1,0 +1,102 @@
+[mod]
+id = "horizon_keybind_manager"
+version = "0.1.0"
+priority = 100
+
+[compatibility]
+horizon_revision = "2ebf00a0281c592f79191e76fce0e7d522c6f425"
+
+[[module]]
+id = "runtime"
+file = "crates/horizon-client-render/src/options_ui.rs"
+name = "keybind_manager_runtime"
+source = "runtime.rs"
+visibility = "pub"
+
+[[module]]
+id = "screen"
+file = "crates/horizon-client-render/src/options_ui.rs"
+name = "keybind_manager_screen"
+source = "screen.rs"
+visibility = "pub"
+
+[[state]]
+id = "screen_state"
+target = "horizon_client_render::ui::EditBox"
+ty = "crate::options_ui::keybind_manager_screen::ScreenState"
+initial = "::core::default::Default::default()"
+
+[[state.constructor]]
+target = "horizon_client_render::ui::EditBox::new"
+selector = "Self"
+require = 1
+
+[[injection]]
+id = "layout"
+kind = "HEAD"
+cancellable = true
+target = "horizon_client_render::options_ui::OptionsUi::layout"
+helper = "layout.rs"
+bindings = [
+  { name = "ui", ty = "&mut OptionsUi", value = "&mut *self" },
+  { name = "settings", ty = "&Settings", value = "s" },
+  { name = "width", ty = "f32", value = "w" },
+  { name = "height", ty = "f32", value = "h" },
+]
+
+[[injection]]
+id = "page"
+kind = "HEAD"
+target = "horizon_client_render::options_ui::OptionsUi::push"
+helper = "page.rs"
+bindings = [
+  { name = "ui", ty = "&mut OptionsUi", value = "&mut *self" },
+  { name = "page", ty = "Page", value = "page" },
+]
+
+[[injection]]
+id = "mouse_actions"
+kind = "HEAD"
+cancellable = true
+target = "horizon_client_render::options_ui::OptionsUi::click"
+helper = "mouse.rs"
+bindings = [
+  { name = "ui", ty = "&mut OptionsUi", value = "&mut *self" },
+  { name = "settings", ty = "&mut Settings", value = "&mut *s" },
+  { name = "x", ty = "f32", value = "x" },
+  { name = "y", ty = "f32", value = "y" },
+  { name = "size", ty = "(f32, f32)", value = "size" },
+  { name = "framebuffer", ty = "[i32; 2]", value = "framebuffer" },
+  { name = "drag", ty = "bool", value = "drag" },
+  { name = "right", ty = "bool", value = "right" },
+]
+
+[[injection]]
+id = "keyboard_actions"
+kind = "HEAD"
+cancellable = true
+target = "horizon_client_render::options_ui::OptionsUi::key_modifiers"
+helper = "keyboard.rs"
+bindings = [
+  { name = "ui", ty = "&mut OptionsUi", value = "&mut *self" },
+  { name = "settings", ty = "&mut Settings", value = "&mut *s" },
+  { name = "key", ty = "winit::keyboard::KeyCode", value = "key" },
+]
+
+[[injection]]
+id = "tooltip"
+kind = "HEAD"
+cancellable = true
+target = "horizon_client_render::options_ui::tooltip_text"
+helper = "tooltip.rs"
+bindings = [
+  { name = "settings", ty = "&Settings", value = "s" },
+  { name = "widget", ty = "&Widget", value = "wd" },
+]
+
+[[injection]]
+id = "list"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_mods"
+helper = "list.rs"
+bindings = [{ name = "mods", ty = "&mut Vec<NativeMod>", value = "&mut *mods" }]

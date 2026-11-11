@@ -1,0 +1,89 @@
+name: Release Horizon Native Mod
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-verify:
+    name: Test & Verify Native Mod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: rustfmt, clippy
+
+      - name: Run unit tests
+        run: cargo test --verbose
+
+      - name: Check formatting
+        run: |
+          cargo fmt --check
+          find mixins -name '*.rs' -exec rustfmt --edition 2024 --check {} +
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Horizon build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config
+
+      - name: Verify full native mod against Horizon engine (native.py check)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 https://github.com/horizon-rust/horizon-mods.git /tmp/horizon-mods
+          mkdir -p /tmp/horizon-mods/native/horizon-keybind-manager
+          cp -r compatibility.json mixins LICENSE /tmp/horizon-mods/native/horizon-keybind-manager/
+          python3 /tmp/horizon-mods/native/tools/native.py check horizon-keybind-manager
+          python3 /tmp/horizon-mods/native/tools/native.py check horizon-keybind-manager --horizon latest
+
+      - name: Package .hnmod and calculate SHA-256
+        run: |
+          python package.py --out dist
+          sha256sum dist/*.hnmod > dist/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: horizon-keybind-manager
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test-and-verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: horizon-keybind-manager
+          path: dist
+
+      - name: Verify tag and bundle checksum
+        run: |
+          cd dist
+          test -f "horizon_keybind_manager-${GITHUB_REF_NAME#v}.hnmod"
+          sha256sum --check SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.hnmod
+            dist/SHA256SUMS
+          generate_release_notes: true

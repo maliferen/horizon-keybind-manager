@@ -1,0 +1,10 @@
+[package]
+name = "horizon-keybind-manager"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["maliferen"]
+publish = false
+
+[lib]
+path = "mixins/horizon_keybind_manager/runtime.rs"
